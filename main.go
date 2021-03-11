@@ -36,6 +36,8 @@ var (
 	replace bool
 	workers int
 	dryRun bool
+	prependToName string
+	appendToName string
 )
 
 // set the flags
@@ -43,6 +45,8 @@ func init() {
 	flag.StringVar(&dir, "d", "", "the directory to crawl")
 	flag.UintVar(&quality, "q", 0, "the quality for the webp images")
 	flag.BoolVar(&replace, "r", false, "replace existing webp files")
+	flag.StringVar(&prependToName, "prepend", "", "prepend string to the beginning of file name")
+	flag.StringVar(&appendToName, "append", "", "append string to the end of file name")
 	flag.BoolVar(&dryRun, "dry-run", false, "whether to handle this as a dry run and only " +
 		"print target files")
 	flag.IntVar(&workers, "w", runtime.NumCPU(), "the number of worker routines to spawn. " +
@@ -132,8 +136,11 @@ func (p *pool) execute(j *job) {
 	// get the target's extension
 	targetExt = filepath.Ext(j.input)
 
-	// output is the old filepath with new webp extension
-	r.outputFile = j.input[:len(j.input)-len(targetExt)] + ".webp"
+	base := filepath.Base(j.input)
+	path := filepath.Dir(j.input)
+
+	// output is the old filepath with new webp extension and prepend and append strings
+	r.outputFile = filepath.Join(path, prependToName + base[:len(base)-len(targetExt)] + appendToName + ".webp")
 
 	// check if file already exists
 	if !replace {
@@ -174,6 +181,16 @@ func (p *pool) execute(j *job) {
 	if r.err != nil {
 		log.Printf("!ERROR webp generation for %s FAILED with error: %s\n", r.err)
 	} else {
+		if fSizeOutput > fSizeTarget {
+			// webp is bigger than output file???
+			log.Printf("!WARNING %s is bigger than %s. deleting...", j.input, r.outputFile)
+			r.err = os.Remove(r.outputFile)
+			if r.err != nil {
+				// should never happen this error but return the error if we have one
+				return
+			}
+
+		}
 		log.Printf("%s \u2192 %s [%.2f%%]\n", j.input, r.outputFile, r.compression)
 	}
 

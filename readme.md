@@ -9,15 +9,18 @@ directory with the same base file name
 Usage:
 ```
 Usage:
+  -append string
+        append string to the end of file name
   -d string
         the directory to crawl
   -dry-run
         whether to handle this as a dry run and only print target files
+  -prepend string
+        prepend string to the beginning of file name
   -q uint
         the quality for the webp images
   -r    replace existing webp files
   -w int
-        the number of worker routines to spawn. Defaults to number of CPUs
-
+        the number of worker routines to spawn. Defaults to number of CPUs. (default 16)
 ```
 
