@@ -14,10 +14,24 @@ import (
 )
 
 var (
-	quality   uint
-	dir       string
-	replace   bool
+	quality uint
+	dir     string
+	replace bool
 )
+
+func printLogo() {
+	fmt.Print(`
+                                 _            
+                                | |           
+  ____    ___  __      __  ___  | |__    _ __  
+ / _  |  / _ \ \ \ /\ / / / _ \ | '_ \  | '_ \
+| (_| | | (_) | \ V  V / |  __/ | |_) | | |_) |
+\___, |  \___/   \_/\_/   \___| |_.__/  | .__/
+ ___/ |                                 | |
+|____/                                  |_|
+
+`)
+}
 
 func mustGetFileSize(file string) int64 {
 	fi, err := os.Stat(file)
@@ -184,13 +198,20 @@ var re = regexp.MustCompile(`(?i)\.(jpe?g|png)$`)
 func init() {
 	flag.StringVar(&dir, "d", "", "the directory to crawl")
 	flag.UintVar(&quality, "q", 0, "the quality for the webp images")
-	flag.BoolVar(&replace, "r", false, "replace the files")
+	flag.BoolVar(&replace, "r", false, "replace existing webp files")
 }
 
+
 func main() {
+	printLogo()
 	flag.Parse()
 	if len(dir) < 1 || quality < 1 {
-		fmt.Println("")
+		// print help
+		fmt.Print(`
+gowebp is a tool used to create webp images from jpegs and png files
+
+Usage:
+`)
 		flag.PrintDefaults()
 		os.Exit(1)
 	}
