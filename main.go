@@ -9,14 +9,9 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
+	"runtime"
 	"strings"
 	"sync"
-)
-
-var (
-	quality uint
-	dir     string
-	replace bool
 )
 
 func printLogo() {
@@ -32,6 +27,25 @@ func printLogo() {
 
 `)
 }
+
+
+var (
+	imageRe = regexp.MustCompile(`(?i)\.(jpe?g|png)$`)
+	quality uint
+	dir     string
+	replace bool
+	workers int
+)
+
+// set the flags
+func init() {
+	flag.StringVar(&dir, "d", "", "the directory to crawl")
+	flag.UintVar(&quality, "q", 0, "the quality for the webp images")
+	flag.BoolVar(&replace, "r", false, "replace existing webp files")
+	flag.IntVar(&workers, "w", runtime.NumCPU(), "the number of worker routines to spawn. " +
+		"Defaults to number of CPUs.")
+}
+
 
 func mustGetFileSize(file string) int64 {
 	fi, err := os.Stat(file)
@@ -187,20 +201,11 @@ func (p *pool) worker() {
 			// execute a job and pass the result into the result channel
 			p.execute(j)
 		case <-p.ctx.Done():
-			// we're done early
+			// we'imageRe done early
 			return
 		}
 	}
 }
-
-var re = regexp.MustCompile(`(?i)\.(jpe?g|png)$`)
-
-func init() {
-	flag.StringVar(&dir, "d", "", "the directory to crawl")
-	flag.UintVar(&quality, "q", 0, "the quality for the webp images")
-	flag.BoolVar(&replace, "r", false, "replace existing webp files")
-}
-
 
 func main() {
 	printLogo()
@@ -216,7 +221,7 @@ Usage:
 		os.Exit(1)
 	}
 
-	p := newPool(context.Background(), 10)
+	p := newPool(context.Background(), workers)
 
 	dir = strings.TrimSpace(dir)
 
@@ -233,7 +238,7 @@ Usage:
 				return err
 			}
 
-			if re.MatchString(info.Name()) {
+			if imageRe.MatchString(info.Name()) {
 				log.Println("found image:", path)
 				p.jobs <- newJob(path, quality)
 				cnt += 1

@@ -8,10 +8,13 @@ directory with the same base file name
 
 Usage:
 ```
--d string
+Usage:
+  -d string
         the directory to crawl
--q uint
+  -q uint
         the quality for the webp images
--r      replace existing webp files
+  -r    replace existing webp files
+  -w int
+        the number of worker routines to spawn. Defaults to number of CPUs. (default 16)
 ```
 
