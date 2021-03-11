@@ -35,6 +35,7 @@ var (
 	dir     string
 	replace bool
 	workers int
+	dryRun bool
 )
 
 // set the flags
@@ -42,6 +43,8 @@ func init() {
 	flag.StringVar(&dir, "d", "", "the directory to crawl")
 	flag.UintVar(&quality, "q", 0, "the quality for the webp images")
 	flag.BoolVar(&replace, "r", false, "replace existing webp files")
+	flag.BoolVar(&dryRun, "dry-run", false, "whether to handle this as a dry run and only " +
+		"print target files")
 	flag.IntVar(&workers, "w", runtime.NumCPU(), "the number of worker routines to spawn. " +
 		"Defaults to number of CPUs.")
 }
@@ -142,6 +145,13 @@ func (p *pool) execute(j *job) {
 		}
 	}
 
+	if dryRun {
+		// if it's a dry run then just print and return
+		log.Printf("%s \u2192 %s [?]\n", j.input, r.outputFile)
+		return
+	}
+
+
 	// get the size of the original file
 	fSizeTarget := mustGetFileSize(j.input)
 
@@ -162,9 +172,9 @@ func (p *pool) execute(j *job) {
 	r.compression = (1 - (float64(fSizeOutput) / float64(fSizeTarget))) * 100
 
 	if r.err != nil {
-		log.Printf("got error from job: %s\n", r.err)
+		log.Printf("!ERROR webp generation for %s FAILED with error: %s\n", r.err)
 	} else {
-		log.Printf("compressed %s to %s by %.2f%%\n", j.input, r.outputFile, r.compression)
+		log.Printf("%s \u2192 %s [%.2f%%]\n", j.input, r.outputFile, r.compression)
 	}
 
 	return
@@ -210,7 +220,7 @@ func (p *pool) worker() {
 func main() {
 	printLogo()
 	flag.Parse()
-	if len(dir) < 1 || quality < 1 {
+	if (len(dir) < 1 || quality < 1) && !dryRun {
 		// print help
 		fmt.Print(`
 gowebp is a tool used to create webp images from jpegs and png files
@@ -225,21 +235,32 @@ Usage:
 
 	dir = strings.TrimSpace(dir)
 
-	log.Println("CRAWLING:", dir)
-	log.Println("QUALITY:", quality)
+	dir, err := filepath.Abs(dir)
+
+	if err != nil {
+		fmt.Println("dir is not valid!")
+		os.Exit(2)
+	}
+
+	fmt.Println("CRAWLING:\t", dir)
+	fmt.Println("QUALITY:\t", quality)
+	fmt.Println("WORKERS:\t", workers)
+	if dryRun {
+		fmt.Println("*** THIS IS A DRY RUN ***")
+	}
 
 	// stop pool when exiting
 	defer p.stop()
 
 	cnt := 0
-	err := filepath.Walk(dir,
+	err = filepath.Walk(dir,
 		func(path string, info os.FileInfo, err error) error {
 			if err != nil {
 				return err
 			}
 
 			if imageRe.MatchString(info.Name()) {
-				log.Println("found image:", path)
+				//log.Println("found image:", path)
 				p.jobs <- newJob(path, quality)
 				cnt += 1
 			}

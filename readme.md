@@ -11,10 +11,13 @@ Usage:
 Usage:
   -d string
         the directory to crawl
+  -dry-run
+        whether to handle this as a dry run and only print target files
   -q uint
         the quality for the webp images
   -r    replace existing webp files
   -w int
-        the number of worker routines to spawn. Defaults to number of CPUs. (default 16)
+        the number of worker routines to spawn. Defaults to number of CPUs
+
 ```
 
