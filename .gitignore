@@ -5,6 +5,7 @@ gowebp
 *.jpg
 *.jpeg
 *.png
+test/
 
 # Created by .ignore support plugin (hsz.mobi)
 ### Go template
