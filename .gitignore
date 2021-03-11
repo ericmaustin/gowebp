@@ -1,6 +1,11 @@
 # compiled output
 gowebp
 
+# ignore any test images
+*.jpg
+*.jpeg
+*.png
+
 # Created by .ignore support plugin (hsz.mobi)
 ### Go template
 # Binaries for programs and plugins
