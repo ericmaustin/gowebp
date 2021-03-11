@@ -8,13 +8,14 @@ directory with the same base file name
 
 Usage:
 ```
-Usage:
   -append string
         append string to the end of file name
   -d string
         the directory to crawl
   -dry-run
         whether to handle this as a dry run and only print target files
+  -min-size string
+        smallest file size that will have a webp image created (default "10KB")
   -prepend string
         prepend string to the beginning of file name
   -q uint

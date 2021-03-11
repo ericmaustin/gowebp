@@ -4,6 +4,7 @@ import (
 	"context"
 	"flag"
 	"fmt"
+	"github.com/c2h5oh/datasize"
 	"github.com/nickalie/go-webpbin"
 	"log"
 	"os"
@@ -30,14 +31,16 @@ func printLogo() {
 
 
 var (
-	imageRe = regexp.MustCompile(`(?i)\.(jpe?g|png)$`)
-	quality uint
-	dir     string
-	replace bool
-	workers int
-	dryRun bool
-	prependToName string
-	appendToName string
+	imageRe          = regexp.MustCompile(`(?i)\.(jpe?g|png)$`)
+	quality          uint
+	dir              string
+	replace          bool
+	workers          int
+	dryRun           bool
+	prependToName    string
+	appendToName     string
+	inputMinFileSize string
+	minFileSize      datasize.ByteSize
 )
 
 // set the flags
@@ -47,10 +50,21 @@ func init() {
 	flag.BoolVar(&replace, "r", false, "replace existing webp files")
 	flag.StringVar(&prependToName, "prepend", "", "prepend string to the beginning of file name")
 	flag.StringVar(&appendToName, "append", "", "append string to the end of file name")
+	flag.StringVar(&inputMinFileSize, "min-size", "10KB",
+		"smallest file size that will have a webp image created")
 	flag.BoolVar(&dryRun, "dry-run", false, "whether to handle this as a dry run and only " +
 		"print target files")
 	flag.IntVar(&workers, "w", runtime.NumCPU(), "the number of worker routines to spawn. " +
 		"Defaults to number of CPUs.")
+
+	flag.Parse()
+
+	err := minFileSize.UnmarshalText([]byte(inputMinFileSize))
+
+	if err != nil {
+		log.Printf("!!ERROR: %s is not a valid file size", inputMinFileSize)
+		os.Exit(1)
+	}
 }
 
 
@@ -152,15 +166,21 @@ func (p *pool) execute(j *job) {
 		}
 	}
 
+	// get the size of the original file
+	fSizeTarget := datasize.ByteSize(mustGetFileSize(j.input))
+
+	if fSizeTarget.Bytes() < minFileSize.Bytes() {
+		// nothing to do
+		log.Printf("%s size [%s] is smaller than the minimum file size [%s]. Skipping...",
+			j.input, fSizeTarget.HumanReadable(), minFileSize.HumanReadable())
+		return
+	}
+
 	if dryRun {
 		// if it's a dry run then just print and return
 		log.Printf("%s \u2192 %s [?]\n", j.input, r.outputFile)
 		return
 	}
-
-
-	// get the size of the original file
-	fSizeTarget := mustGetFileSize(j.input)
 
 	r.err = webpbin.NewCWebP().
 		Quality(j.quality).
@@ -173,7 +193,7 @@ func (p *pool) execute(j *job) {
 	}
 
 	// get the file size of the new file
-	fSizeOutput := mustGetFileSize(r.outputFile)
+	fSizeOutput := datasize.ByteSize(mustGetFileSize(r.outputFile))
 
 	// calculate the compression percentage
 	r.compression = (1 - (float64(fSizeOutput) / float64(fSizeTarget))) * 100
@@ -181,7 +201,7 @@ func (p *pool) execute(j *job) {
 	if r.err != nil {
 		log.Printf("!ERROR webp generation for %s FAILED with error: %s\n", r.err)
 	} else {
-		if fSizeOutput > fSizeTarget {
+		if fSizeOutput.Bytes() > fSizeTarget.Bytes() {
 			// webp is bigger than output file???
 			log.Printf("!WARNING %s is bigger than %s. deleting...", j.input, r.outputFile)
 			r.err = os.Remove(r.outputFile)
@@ -191,7 +211,8 @@ func (p *pool) execute(j *job) {
 			}
 
 		}
-		log.Printf("%s \u2192 %s [%.2f%%]\n", j.input, r.outputFile, r.compression)
+		log.Printf("%s (%s) \u2192 %s (%s) [%.2f%%]\n",
+			j.input, fSizeTarget.HumanReadable(), r.outputFile, fSizeOutput.HumanReadable(), r.compression)
 	}
 
 	return
@@ -236,7 +257,6 @@ func (p *pool) worker() {
 
 func main() {
 	printLogo()
-	flag.Parse()
 	if (len(dir) < 1 || quality < 1) && !dryRun {
 		// print help
 		fmt.Print(`
@@ -262,6 +282,7 @@ Usage:
 	fmt.Println("CRAWLING:\t", dir)
 	fmt.Println("QUALITY:\t", quality)
 	fmt.Println("WORKERS:\t", workers)
+	fmt.Println("MIN FILE SIZE:\t", minFileSize.String())
 	if dryRun {
 		fmt.Println("*** THIS IS A DRY RUN ***")
 	}

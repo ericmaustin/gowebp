@@ -3,6 +3,7 @@ module gowebp
 go 1.15
 
 require (
+	github.com/c2h5oh/datasize v0.0.0-20200825124411-48ed595a09d2
 	github.com/dsnet/compress v0.0.1 // indirect
 	github.com/golang/snappy v0.0.3 // indirect
 	github.com/mholt/archiver v3.1.1+incompatible // indirect
