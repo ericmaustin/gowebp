@@ -206,7 +206,7 @@ func (p *pool) execute(j *job) {
 	} else {
 		if fSizeOutput.Bytes() > fSizeTarget.Bytes() {
 			// webp is bigger than output file???
-			log.Printf("!WARNING %s is bigger than %s. deleting...", j.input, r.outputFile)
+			log.Printf("!WARNING output file %s is bigger than input file %s. deleting...", r.outputFile, j.input)
 			r.err = os.Remove(r.outputFile)
 			if r.err != nil {
 				// should never happen this error but return the error if we have one
