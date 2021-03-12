@@ -29,7 +29,6 @@ func printLogo() {
 `)
 }
 
-
 var (
 	imageRe          = regexp.MustCompile(`(?i)\.(jpe?g|png)$`)
 	quality          uint
@@ -45,6 +44,8 @@ var (
 
 // set the flags
 func init() {
+	// do not download binary
+	webpbin.SkipDownload()
 	flag.StringVar(&dir, "d", "", "the directory to crawl")
 	flag.UintVar(&quality, "q", 0, "the quality for the webp images")
 	flag.BoolVar(&replace, "r", false, "replace existing webp files")
@@ -65,8 +66,10 @@ func init() {
 		log.Printf("!!ERROR: %s is not a valid file size", inputMinFileSize)
 		os.Exit(1)
 	}
-}
 
+	// log to standard output
+	log.SetOutput(os.Stdout)
+}
 
 func mustGetFileSize(file string) int64 {
 	fi, err := os.Stat(file)
